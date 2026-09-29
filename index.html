@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Inclined Plane Forces v2</title>
+<style>
+  :root{
+    --bg:#f6f8fb;
+    --panel:#ffffff;
+    --ink:#1f2937;
+    --muted:#64748b;
+    --line:#cbd5e1;
+    --accent:#2563eb;
+    --weight:#111827;
+    --comp:#d97706;
+    --normal:#16a34a;
+    --axis:#7c3aed;
+  }
+  *{box-sizing:border-box}
+  html, body { height:100%; }
+  body{
+    margin:0;
+    font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    overflow:hidden;
+  }
+  .app{
+    height:100vh;
+    display:grid;
+    grid-template-rows:auto 1fr;
+  }
+  header{
+    padding:12px 18px 8px;
+    max-width:1600px;
+    width:100%;
+    margin:0 auto;
+  }
+  h1{
+    margin:0 0 4px;
+    font-size:clamp(20px,2vw,28px);
+    line-height:1.15;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:clamp(12px,1.1vw,15px);
+    line-height:1.35;
+    margin-bottom:6px;
+  }
+  .instruction{
+    background:#eef4ff;
+    border:1px solid #cfe0ff;
+    border-radius:12px;
+    padding:8px 12px;
+    font-size:clamp(12px,1vw,14px);
+    line-height:1.35;
+    color:#1e3a8a;
+  }
+
+  main{
+    max-width:1600px;
+    width:100%;
+    margin:0 auto;
+    padding:10px 18px 14px;
+    display:grid;
+    grid-template-columns:minmax(520px,1.12fr) minmax(360px,.88fr);
+    gap:14px;
+    min-height:0;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+    box-shadow:0 8px 24px rgba(15,23,42,.06);
+    overflow:hidden;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+  }
+  .panel h2{
+    margin:0;
+    padding:12px 16px 6px;
+    font-size:17px;
+    line-height:1.15;
+  }
+
+  .diagram-wrap{
+    padding:6px 12px 8px;
+    flex:1;
+    min-height:0;
+    display:flex;
+    align-items:center;
+  }
+  svg{
+    width:100%;
+    max-height:100%;
+    height:auto;
+    display:block;
+  }
+
+  .controls{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:10px 12px 12px;
+    border-top:1px solid #eef2f7;
+  }
+  button{
+    border:none;
+    border-radius:10px;
+    background:var(--accent);
+    color:white;
+    padding:9px 12px;
+    font-size:14px;
+    cursor:pointer;
+  }
+  button.secondary{background:#475569}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .angle-readout{
+    min-width:110px;
+    text-align:center;
+    font-size:19px;
+    font-weight:700;
+  }
+
+  .info-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+    padding:8px 14px 12px;
+  }
+  .card{
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    padding:10px 11px;
+    background:#fbfdff;
+  }
+  .card .label{font-size:12px;color:var(--muted)}
+  .card .value{font-size:20px;font-weight:700;margin-top:2px}
+
+  .formula{
+    padding:0 14px 10px;
+    color:#334155;
+    font-size:13px;
+    line-height:1.35;
+  }
+
+  .graphs{
+    display:grid;
+    grid-template-rows:1fr 1fr;
+    gap:10px;
+    padding:0 12px 12px;
+    min-height:0;
+    flex:1;
+  }
+  .graph-box{
+    min-height:0;
+  }
+  canvas{
+    width:100%;
+    height:100%;
+    min-height:180px;
+    background:#fff;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    display:block;
+  }
+
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    padding:0 14px 10px;
+    font-size:12px;
+    color:#475569;
+  }
+  .dot{
+    display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle
+  }
+
+  @media (max-width: 1020px){
+    body{ overflow:auto; }
+    .app{ height:auto; min-height:100vh; }
+    main{
+      grid-template-columns:1fr;
+      min-height:auto;
+    }
+    .panel{ min-height:auto; }
+    .diagram-wrap{ min-height:320px; }
+    .graphs{ grid-template-rows:auto auto; }
+    canvas{ min-height:220px; }
+  }
+
+  @media (max-height: 760px){
+    .sub{ display:none; }
+    .diagram-wrap{ padding-bottom:4px; }
+    .panel h2{ padding-top:10px; padding-bottom:4px; }
+    .controls{ padding-top:8px; padding-bottom:10px; }
+    canvas{ min-height:150px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>Inclined Plane Forces — v2.1</h1>
+  <div class="sub">Explore how the components of weight and the normal force vary as the angle of inclination changes.</div>
+  <div class="instruction"><strong>Instruction:</strong> Click on a button to vary the angle of inclination — what happens to the force vectors and components?</div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Interactive force diagram</h2>
+    <div class="diagram-wrap">
+      <svg id="scene" viewBox="0 0 760 460" aria-label="Inclined plane force diagram">
+        <defs>
+          <!-- Arrowheads reduced to about 25% of original size -->
+          <marker id="arrowBlack" markerWidth="3" markerHeight="3" refX="2.4" refY="1.5" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L3,1.5 L0,3 z" fill="#111827"/>
+          </marker>
+          <marker id="arrowOrange" markerWidth="3" markerHeight="3" refX="2.4" refY="1.5" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L3,1.5 L0,3 z" fill="#d97706"/>
+          </marker>
+          <marker id="arrowGreen" markerWidth="3" markerHeight="3" refX="2.4" refY="1.5" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L3,1.5 L0,3 z" fill="#16a34a"/>
+          </marker>
+          <marker id="arrowPurple" markerWidth="2.7" markerHeight="2.7" refX="2.15" refY="1.35" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L2.7,1.35 L0,2.7 z" fill="#7c3aed"/>
+          </marker>
+        </defs>
+
+        <line id="ground" x1="70" y1="392" x2="700" y2="392" stroke="#cbd5e1" stroke-width="2"/>
+        <g id="planeGroup"></g>
+        <g id="vectors"></g>
+        <g id="axes"></g>
+        <g id="labels"></g>
+
+        <rect x="28" y="36" width="192" height="78" rx="12" fill="#f8fafc" stroke="#cbd5e1"/>
+        <text x="44" y="63" font-size="17" font-weight="700" fill="#1f2937">Given:</text>
+        <text x="44" y="86" font-size="15" fill="#334155">m = 2.0 kg</text>
+        <text x="44" y="107" font-size="15" fill="#334155">g ≈ 10 m/s²</text>
+      </svg>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot" style="background:#111827"></span>Weight, Fg</span>
+      <span><span class="dot" style="background:#d97706"></span>Weight components</span>
+      <span><span class="dot" style="background:#16a34a"></span>Normal force, Fn</span>
+      <span><span class="dot" style="background:#7c3aed"></span>x–y axes</span>
+    </div>
+
+    <div class="controls">
+      <button id="decrease">− 5°</button>
+      <div class="angle-readout">θ = <span id="thetaVal">0</span>°</div>
+      <button id="increase">+ 5°</button>
+      <button id="reset" class="secondary">Reset graphs</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Force values</h2>
+    <div class="info-grid">
+      <div class="card">
+        <div class="label">Fg</div>
+        <div class="value" id="fgVal">20.0 N</div>
+      </div>
+      <div class="card">
+        <div class="label">Fg(x)</div>
+        <div class="value" id="fgxVal">0.0 N</div>
+      </div>
+      <div class="card">
+        <div class="label">Fg(y)</div>
+        <div class="value" id="fgyVal">20.0 N</div>
+      </div>
+      <div class="card">
+        <div class="label">Fn</div>
+        <div class="value" id="fnVal">20.0 N</div>
+      </div>
+    </div>
+    <div class="formula">
+      Fg(x) = mg sin θ &nbsp;&nbsp;&nbsp; Fg(y) = mg cos θ &nbsp;&nbsp;&nbsp; Fn = mg cos θ
+    </div>
+
+    <h2>Graphs</h2>
+    <div class="graphs">
+      <div class="graph-box"><canvas id="graphX"></canvas></div>
+      <div class="graph-box"><canvas id="graphY"></canvas></div>
+    </div>
+  </section>
+</main>
+</div>
+
+<script>
+const DEG = Math.PI/180;
+const m = 2.0;
+const g = 10.0;
+const Fg = m*g;
+const forceScale = 7.0;
+
+let theta = 0;
+const plottedX = new Map();
+const plottedY = new Map();
+
+const planeGroup = document.getElementById('planeGroup');
+const vectors = document.getElementById('vectors');
+const axes = document.getElementById('axes');
+const labels = document.getElementById('labels');
+
+const thetaVal = document.getElementById('thetaVal');
+const fgVal = document.getElementById('fgVal');
+const fgxVal = document.getElementById('fgxVal');
+const fgyVal = document.getElementById('fgyVal');
+const fnVal = document.getElementById('fnVal');
+
+const incBtn = document.getElementById('increase');
+const decBtn = document.getElementById('decrease');
+const resetBtn = document.getElementById('reset');
+
+const graphX = document.getElementById('graphX');
+const graphY = document.getElementById('graphY');
+
+function setCanvasResolution(canvas){
+  const rect = canvas.getBoundingClientRect();
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const width = Math.max(280, Math.floor(rect.width * dpr));
+  const height = Math.max(150, Math.floor(rect.height * dpr));
+  if (canvas.width !== width || canvas.height !== height){
+    canvas.width = width;
+    canvas.height = height;
+  }
+}
+
+function svgEl(tag, attrs={}, text=''){
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for(const [k,v] of Object.entries(attrs)) el.setAttribute(k,v);
+  if(text) el.textContent = text;
+  return el;
+}
+
+function clear(g){
+  while(g.firstChild) g.removeChild(g.firstChild);
+}
+
+function unitVectors(angleDeg){
+  const a = angleDeg * DEG;
+  // Reflected diagram:
+  // +x runs down the slope to the RIGHT
+  // +y runs perpendicular to the plane, outward from the UPPER surface
+  return {
+    ex: {x: Math.cos(a), y: Math.sin(a)},
+    ey: {x: Math.sin(a), y: -Math.cos(a)}
+  };
+}
+
+function drawScene(){
+  clear(planeGroup); clear(vectors); clear(axes); clear(labels);
+
+  const a = theta * DEG;
+
+  // Bottom-right pivot so the reflected plane rises up to the left.
+  const origin = {x: 628, y: 392};
+  const planeLength = 470;
+  const top = {
+    x: origin.x - planeLength * Math.cos(a),
+    y: origin.y - planeLength * Math.sin(a)
+  };
+
+  // Plane
+  planeGroup.appendChild(svgEl('line',{
+    x1: origin.x, y1: origin.y,
+    x2: top.x, y2: top.y,
+    stroke:'#64748b', 'stroke-width':8, 'stroke-linecap':'round'
+  }));
+
+  // Angle arc
+  const r = 52;
+  const arcStart = {x: origin.x - r, y: origin.y};
+  const arcEnd = {x: origin.x - r*Math.cos(a), y: origin.y - r*Math.sin(a)};
+  planeGroup.appendChild(svgEl('path',{
+    d:`M ${arcStart.x} ${arcStart.y} A ${r} ${r} 0 0 0 ${arcEnd.x} ${arcEnd.y}`,
+    fill:'none', stroke:'#94a3b8', 'stroke-width':2
+  }));
+  planeGroup.appendChild(svgEl('text',{
+    x: origin.x - 72*Math.cos(a/2),
+    y: origin.y - 72*Math.sin(a/2) - 4,
+    'font-size':16, fill:'#475569'
+  }, `θ = ${theta}°`));
+
+  // Block position
+  const along = 265;
+  const normalOffset = 26;
+  const cx = origin.x - along*Math.cos(a) + normalOffset*Math.sin(a);
+  const cy = origin.y - along*Math.sin(a) - normalOffset*Math.cos(a);
+  const blockW = 76, blockH = 44;
+
+  const block = svgEl('rect',{
+    x: cx - blockW/2,
+    y: cy - blockH/2,
+    width: blockW,
+    height: blockH,
+    rx: 6,
+    fill:'#dbeafe',
+    stroke:'#2563eb',
+    'stroke-width':2.5,
+    transform:`rotate(${theta} ${cx} ${cy})`
+  });
+  planeGroup.appendChild(block);
+  planeGroup.appendChild(svgEl('text',{
+    x: cx, y: cy + 5,
+    'text-anchor':'middle',
+    'font-size':15,
+    'font-weight':700,
+    fill:'#1e3a8a'
+  }, '2.0 kg'));
+
+  const {ex, ey} = unitVectors(theta);
+  const fx = Fg * Math.sin(a);
+  const fy = Fg * Math.cos(a);
+  const fn = fy;
+
+  function arrow(group, x1, y1, dx, dy, color, marker, dash=''){
+    const attrs = {
+      x1, y1, x2: x1 + dx, y2: y1 + dy,
+      stroke: color, 'stroke-width': 4,
+      'marker-end': `url(#${marker})`,
+      'stroke-linecap':'round'
+    };
+    if(dash) attrs['stroke-dasharray'] = dash;
+    group.appendChild(svgEl('line', attrs));
+  }
+
+  // Weight
+  arrow(vectors, cx, cy, 0, Fg*forceScale, '#111827', 'arrowBlack');
+
+  // Components
+  arrow(vectors, cx, cy, ex.x*fx*forceScale, ex.y*fx*forceScale, '#d97706', 'arrowOrange', '8 7');
+  arrow(vectors, cx, cy, -ey.x*fy*forceScale, -ey.y*fy*forceScale, '#d97706', 'arrowOrange', '8 7');
+
+  // Normal force
+  arrow(vectors, cx, cy, ey.x*fn*forceScale, ey.y*fn*forceScale, '#16a34a', 'arrowGreen');
+
+  // Local axes positioned to the left of the block
+  const ax0 = {x: cx - 126, y: cy - 80};
+  arrow(axes, ax0.x, ax0.y, ex.x*60, ex.y*60, '#7c3aed', 'arrowPurple');
+  arrow(axes, ax0.x, ax0.y, ey.x*60, ey.y*60, '#7c3aed', 'arrowPurple');
+  axes.appendChild(svgEl('text',{
+    x: ax0.x + ex.x*72 + 3,
+    y: ax0.y + ex.y*72 + 4,
+    'font-size':15, 'font-weight':700, fill:'#7c3aed'
+  }, 'x'));
+  axes.appendChild(svgEl('text',{
+    x: ax0.x + ey.x*72 + 3,
+    y: ax0.y + ey.y*72 + 4,
+    'font-size':15, 'font-weight':700, fill:'#7c3aed'
+  }, 'y'));
+
+  // Labels
+  labels.appendChild(svgEl('text',{
+    x: cx + 8,
+    y: cy + Fg*forceScale/2,
+    'font-size':14, 'font-weight':700, fill:'#111827'
+  }, 'Fg'));
+
+  const midx = {x: cx + ex.x*fx*forceScale*0.52, y: cy + ex.y*fx*forceScale*0.52};
+  labels.appendChild(svgEl('text',{
+    x: midx.x + 8, y: midx.y - 6,
+    'font-size':14, 'font-weight':700, fill:'#b45309'
+  }, 'Fg(x)'));
+
+  const midy = {x: cx - ey.x*fy*forceScale*0.52, y: cy - ey.y*fy*forceScale*0.52};
+  labels.appendChild(svgEl('text',{
+    x: midy.x + 8, y: midy.y - 6,
+    'font-size':14, 'font-weight':700, fill:'#b45309'
+  }, 'Fg(y)'));
+
+  const midn = {x: cx + ey.x*fn*forceScale*0.55, y: cy + ey.y*fn*forceScale*0.55};
+  labels.appendChild(svgEl('text',{
+    x: midn.x + 8, y: midn.y - 6,
+    'font-size':14, 'font-weight':700, fill:'#15803d'
+  }, 'Fn'));
+
+  thetaVal.textContent = theta;
+  fgVal.textContent = Fg.toFixed(1) + ' N';
+  fgxVal.textContent = fx.toFixed(1) + ' N';
+  fgyVal.textContent = fy.toFixed(1) + ' N';
+  fnVal.textContent = fn.toFixed(1) + ' N';
+
+  incBtn.disabled = theta >= 90;
+  decBtn.disabled = theta <= 0;
+}
+
+function drawGraph(canvas, data, title, ylabel){
+  setCanvasResolution(canvas);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,W,H);
+  ctx.scale(dpr, dpr);
+
+  const w = W / dpr;
+  const h = H / dpr;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,w,h);
+
+  const L = 50, R = 16, T = 30, B = 36;
+  const pw = w - L - R, ph = h - T - B;
+
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 1;
+  ctx.font = '12px system-ui';
+  ctx.fillStyle = '#64748b';
+
+  for(let y=0; y<=20; y+=5){
+    const py = T + ph - (y/20)*ph;
+    ctx.beginPath();
+    ctx.moveTo(L, py);
+    ctx.lineTo(w-R, py);
+    ctx.stroke();
+    ctx.fillText(String(y), L-24, py+4);
+  }
+  for(let x=0; x<=90; x+=15){
+    const px = L + (x/90)*pw;
+    ctx.beginPath();
+    ctx.moveTo(px, T);
+    ctx.lineTo(px, h-B);
+    ctx.stroke();
+    ctx.fillText(String(x), px-7, h-B+16);
+  }
+
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(L, T);
+  ctx.lineTo(L, h-B);
+  ctx.lineTo(w-R, h-B);
+  ctx.stroke();
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 14px system-ui';
+  ctx.fillText(title, L, 20);
+  ctx.font = '12px system-ui';
+  ctx.fillText('θ / °', w/2-8, h-8);
+
+  ctx.save();
+  ctx.translate(14, h/2+18);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(ylabel, 0, 0);
+  ctx.restore();
+
+  const pts = [...data.entries()].sort((a,b)=>a[0]-b[0]);
+  ctx.fillStyle = '#2563eb';
+  for(const [x,y] of pts){
+    const px = L + (x/90)*pw;
+    const py = T + ph - (y/20)*ph;
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, 2*Math.PI);
+    ctx.fill();
+  }
+}
+
+function plotCurrent(){
+  const a = theta * DEG;
+  plottedX.set(theta, Fg*Math.sin(a));
+  plottedY.set(theta, Fg*Math.cos(a));
+  drawGraph(graphX, plottedX, 'Fg(x) vs θ', 'Fg(x) / N');
+  drawGraph(graphY, plottedY, 'Fg(y) vs θ', 'Fg(y) / N');
+}
+
+function update(doPlot=true){
+  drawScene();
+  if(doPlot) plotCurrent();
+}
+
+incBtn.addEventListener('click', () => {
+  theta = Math.min(90, theta + 5);
+  update(true);
+});
+
+decBtn.addEventListener('click', () => {
+  theta = Math.max(0, theta - 5);
+  update(true);
+});
+
+resetBtn.addEventListener('click', () => {
+  plottedX.clear();
+  plottedY.clear();
+  theta = 0;
+  update(true);
+});
+
+window.addEventListener('resize', () => {
+  drawScene();
+  drawGraph(graphX, plottedX, 'Fg(x) vs θ', 'Fg(x) / N');
+  drawGraph(graphY, plottedY, 'Fg(y) vs θ', 'Fg(y) / N');
+});
+
+update(true);
+</script>
+</body>
+</html>
